@@ -1,0 +1,21 @@
+{
+  "name": "ai-docs-cursor",
+  "version": "1.0.0",
+  "description": "BA & Tester tool — Cursor + MCP (Figma, Redmine, Google Sheets, Drive)",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "postinstall": "echo 'Copy mcp-config/mcp.json.example to .cursor/mcp.json and fill your API keys. See README.md'",
+    "figma-socket": "node scripts/figma-ws-server.js"
+  },
+  "dependencies": {
+    "cursor-talk-to-figma-mcp": "latest",
+    "@onozaty/redmine-mcp-server": "latest",
+    "mcp-gsheets": "latest"
+  },
+  "overrides": {
+    "zod": "^3.25.0"
+  }
+}

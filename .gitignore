@@ -1,0 +1,12 @@
+node_modules/
+.env
+.cursor/mcp.json
+*.log
+
+# Output khi xử lý task (giữ thư mục output/ + README)
+output/*
+!output/.gitkeep
+!output/README.md
+
+# Raw data task (tránh commit nhầm)
+task-*-raw.json
