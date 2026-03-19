@@ -1,7 +1,7 @@
 {
   "name": "ai-docs-cursor",
   "version": "1.0.0",
-  "description": "BA & Tester tool — Cursor + MCP (Figma, Redmine, Google Sheets, Drive)",
+  "description": "UI Test Case Tool — Cursor + MCP (Figma, Google Sheets)",
   "private": true,
   "engines": {
     "node": ">=18.0.0"
@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "cursor-talk-to-figma-mcp": "latest",
-    "@onozaty/redmine-mcp-server": "latest",
     "mcp-gsheets": "latest"
   },
   "overrides": {

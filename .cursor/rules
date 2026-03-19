@@ -1,48 +1,81 @@
-# BA & TESTER TOOL — CURSOR RULES
+# UI TEST CASE TOOL — CURSOR RULES
 
 ## Vai trò
-Bạn là AI hỗ trợ BA và Tester phân tích task, tạo Spec và Testcase.
-Luôn trả lời và tạo nội dung bằng Tiếng Việt.
+Bạn là AI hỗ trợ Tester sinh UI Test Case từ Figma design và ghi vào Google Sheets.
+Luôn trả lời và tạo nội dung bằng Tiếng Việt. Giữ nguyên tên tiếng Nhật từ design.
 
-## Quy tắc xử lý task
+## Commands
 
-### Khi nhận được Redmine Task ID:
-1. Dùng Redmine MCP đọc task
-2. Tóm tắt: tiêu đề, mô tả, priority, assignee
-3. Extract tất cả links: Figma URL, Google Sheet URLs
-4. Hỏi user: "Chạy full flow hay từng bước?"
+```bash
+npm install              # Install dependencies
+npm run figma-socket     # Start WebSocket server (port 3055) for Figma plugin
+```
 
-### Khi scan Figma:
-1. Kết nối qua Talk-to-Figma MCP
-2. Liệt kê tất cả frames tìm thấy
-3. Với mỗi frame: đọc tên, layout, text content, components
-4. Nhóm theo feature/màn hình
-5. KHÔNG tự động sinh Spec khi chưa có lệnh
+## Kiến trúc
 
-### Khi so sánh Spec cũ vs Figma mới:
-1. Đọc Spec cũ từ Google Sheets
-2. Đọc design hiện tại từ Figma
-3. Tạo bảng so sánh: Giữ nguyên | Thay đổi | Thêm mới | Đã xóa
-4. Highlight các điểm cần cập nhật
-5. Chờ user xác nhận trước khi sinh Spec mới
+```
+Cursor IDE Chat ←→ MCP Layer ←→ External Services
+                      │
+          ┌───────────┼───────────┐
+          ▼           ▼           ▼
+   Talk-to-Figma   Redmine    Google Sheets
+      MCP            MCP         MCP
+          │
+   figma-ws-server.js (ws://localhost:3055)
+          │
+   Figma Desktop Plugin (figma-plugin/)
+```
 
-### Khi sinh Spec:
-- Bám sát template trong file templates/spec-template.md
-- Ưu tiên: thông tin từ Figma > mô tả Redmine
-- Mỗi màn hình/feature = ít nhất 1 spec row
-- Ghi rõ Acceptance Criteria dạng checklist
+## MCP Setup
 
-### Khi sinh Testcase:
-- Bám sát template trong file templates/testcase-template.md
-- Mỗi Spec row → tối thiểu 3 test cases
-- Bắt buộc cover: Happy path, Negative, Validation
-- Thêm nếu phù hợp: Boundary, UI/UX, Permission
+Config: `mcp-config/mcp.json.example` → copy to `.cursor/mcp.json`, điền API keys.
 
-### Khi ghi vào Google Sheet:
-1. LUÔN hiển thị preview data lên chat trước
-2. Hỏi: "Xác nhận ghi vào Sheet chưa?"
-3. Chỉ ghi sau khi user nói "OK" / "Xác nhận" / "Ghi đi"
-4. Báo cáo kết quả sau khi ghi xong
+- **Google Sheets:** `GOOGLE_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS` (đường dẫn file JSON key)
+- **Figma:** Không cần API key — dùng WebSocket + Desktop plugin
+
+## Figma Plugin
+
+Source: `figma-plugin/`. Install: Figma Desktop → Plugins → Development → Import plugin from manifest → `figma-plugin/manifest.json`.
+
+Yêu cầu: Figma **Desktop** (not web), WebSocket server đang chạy (`npm run figma-socket`), plugin đã kích hoạt.
+
+## Quy trình chính: UI Test Case từ Figma
+
+### Bước 1 — Kết nối và scan Figma
+1. Join channel Figma (nếu chưa join)
+2. get_selection → lấy frame đang chọn
+3. get_node_info + scan_text_nodes → scan frame
+4. Xác nhận với user: tên frame, tiếp tục scan?
+
+### Bước 2 — Parse & Filter dữ liệu
+Thực hiện theo `prompts/01-parse-figma-frame-data.md`:
+- Lọc element ẩn (visible: false, opacity: 0)
+- Lọc vùng common (Header, Sidebar, Footer) — mặc định bỏ, trừ khi user yêu cầu
+- Lọc wrapper vô nghĩa
+- Phân loại UI element
+- Gộp repeating items (list)
+- Thông báo cho user đã lọc những gì
+
+### Bước 3 — Sinh UI Test Case
+Thực hiện theo `prompts/02-ui-testcase-from-figma.md`:
+- 1 TC tổng quan + 1 TC riêng cho mỗi element + 1 TC riêng cho mỗi tooltip
+- TC Spacing (padding/gap) + TC Typography tổng hợp ở cuối
+- List items lặp → chỉ 1 TC
+- Expected Result: LUÔN ghi giá trị cụ thể (font, size, color, width, radius, padding) từ Figma scan. KHÔNG ghi "đúng design"
+- Sub Features: phân nhóm theo vùng UI (Title row, Form xxx, Tooltip, Layout...)
+- Priority: M, Creator: AI, Features: tên frame từ Figma
+
+### Bước 4 — Preview và xác nhận
+- LUÔN hiển thị tóm tắt scan + preview bảng TC trên chat
+- Hỏi: "Xác nhận ghi vào Sheet chưa?"
+- Chỉ ghi sau khi user đồng ý
+
+### Bước 5 — Ghi Google Sheet
+Thực hiện theo `prompts/03-tc-scenario-sheet-template.md`:
+- Tạo header + formulas (nếu sheet mới)
+- Merge cells F:I và J:M cho mỗi dòng
+- Ghi data cột A-O
+- Báo cáo kết quả
 
 ## Quy tắc tổng quát
 - Không tự chạy quá 1 bước nếu chưa được yêu cầu

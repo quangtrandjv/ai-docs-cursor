@@ -1,45 +1,54 @@
-# BA & Tester Tool — Cursor + MCP
+# UI Test Case Tool — Cursor + MCP
 
-Sau khi clone, chỉ cần điền thông tin cá nhân là dùng được.
+Tự động sinh UI Test Case từ Figma design và ghi vào Google Sheets.
 
 ## Yêu cầu
 
-- **Node.js 18+** (các MCP cần Node 18; kiểm tra: `node -v`, nếu < 18 thì cài [Node 18 LTS](https://nodejs.org/))
+- **Node.js 18+** (kiểm tra: `node -v`)
 - Cursor IDE
-- Figma Desktop (cho MCP Figma)
+- Figma Desktop
 
-## Setup nhanh
+## Setup
 
-1. **Cài dependency**
-   ```bash
-   npm install
-   ```
+Sau khi clone repo, mở project bằng Cursor → Chat → gõ:
 
-2. **Config MCP (bắt buộc)**
-   - Copy: `mcp-config/mcp.json.example` → `.cursor/mcp.json`
-   - Mở `.cursor/mcp.json`, điền **thông tin cá nhân** (không commit file này):
-     - **Redmine:** `REDMINE_URL`, `REDMINE_API_KEY` (lấy từ Redmine → My account → API access key)
-     - **Google Sheets:** `GOOGLE_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS` (đường dẫn file JSON key). Nếu dùng OAuth, xem [docs/SETUP-GOOGLE-SHEETS-MCP.md](docs/SETUP-GOOGLE-SHEETS-MCP.md).
-   - Share Google Sheet/Drive với email service account (Editor).
-   - **Lưu ý:** Node.js 18+ (kiểm tra: `node -v`).
+```
+/init
+```
 
-3. **Figma (nếu dùng)**  
-   Plugin nằm trong project: **`figma-plugin/manifest.json`** — trong Figma: Plugins → Development → Import plugin from manifest → chọn file đó. Sau đó: chạy `npm run figma-socket` → mở Figma → chạy plugin → Connect. Chi tiết: [setup-figma-talk-to-figma.md](setup-figma-talk-to-figma.md).
-
-4. Mở project bằng Cursor → Chat dùng được các MCP.
+AI sẽ tự động: cài dependency → tạo config MCP → hỏi điền credentials.
 
 ## Cấu trúc
 
-- `.cursor/rules` — Quy tắc cho AI
-- `.cursor/mcp.json` — Config MCP (không commit, mỗi người tự điền)
-- `mcp-config/mcp.json.example` — Template config MCP
-- `prompts/` — Gợi ý prompt từng bước (gồm **08-export-ui-spec-from-figma.md** — xuất UI spec từ frame Figma)
-- `docs/pain-points-and-idea-ui-spec-from-figma.md` — Pain points BA/Tester & ý tưởng tự động UI spec từ design
-- `templates/` — Template Spec & Testcase
-- `output/` — Thư mục lưu kết quả (UI spec, báo cáo, test case…) khi xử lý task
-- `cursor-mcp-plan.md` — Tài liệu kiến trúc & flow
+```
+.cursor/
+  rules                               — Quy tắc cho AI
+  prompts/init.md                     — Slash command /init (auto setup)
+mcp-config/mcp.json.example           — Template config MCP
+prompts/
+  01-parse-figma-frame-data.md        — Parse & filter dữ liệu Figma
+  02-ui-testcase-from-figma.md        — Sinh UI test case
+  03-tc-scenario-sheet-template.md    — Template TC_Scenario cho Google Sheet
+scripts/figma-ws-server.js            — WebSocket server kết nối Figma
+figma-plugin/                         — Figma plugin source
+output/                               — Thư mục lưu kết quả
+```
+
+## Cách dùng
+
+1. Chạy WebSocket server: `npm run figma-socket`
+2. Mở Figma Desktop → import plugin từ `figma-plugin/manifest.json` → Connect
+3. Chọn 1 frame (màn hình) trong Figma
+4. Trong Cursor Chat, gõ:
+   ```
+   Scan frame đang chọn trong Figma và sinh UI test case.
+   Ghi vào Google Sheet:
+   - Spreadsheet ID: [SPREADSHEET_ID]
+   - Sheet: [SHEET_NAME]
+   ```
+5. AI sẽ: scan → parse → sinh TC → preview → chờ xác nhận → ghi Sheet
 
 ## Lưu ý
 
 - File `.cursor/mcp.json` chứa API key → không commit. Đã có trong `.gitignore`.
-- Google: tạo Service Account trên Cloud Console, bật Sheets API + Drive API, share sheet/folder với email service account.
+- Google: tạo Service Account trên Cloud Console, bật Sheets API + Drive API, share sheet với email service account (quyền Editor).
