@@ -131,12 +131,12 @@ W-Y:  Stg, Stg, Stg
 |-----|---------|
 | A (No.) | Formula: `=row()-9` |
 | B (Features) | Tên frame từ Figma (vd: `AT0022`) |
-| C (Sub Features) | Tên tính năng con (vd: `Filter`, `CRUD`). Nếu không có → ghi `-` |
-| D (Test Case Title) | Tiêu đề ngắn gọn. Giữ nguyên tên tiếng Nhật nếu lấy từ design (vd: `所属を選択`) |
-| E (Preconditions) | Điều kiện cần có trước khi test. Để trống nếu không có |
-| F–I (Test Steps) | **Merge 4 cột F:I** trước, rồi ghi numbered list vào ô merged. Luôn dùng format: `1. xxx\n2. xxx\n3. xxx` |
-| J–M (Expected Result) | **Merge 4 cột J:M** trước, rồi ghi numbered list tương ứng với số bước Test Steps |
-| N (Priority) | Mặc định: `M`. Tester sẽ xác nhận lại sau |
+| C (Sub Features) | Tên tính năng con, **dùng tên tiếng Nhật** để phân biệt section (vd: `Form 病棟`, `Form 面会枠`, `Title row`, `List header`). Nếu không xác định được → ghi `-` |
+| D (Test Case Title) | Tiêu đề ngắn gọn. Giữ nguyên tên tiếng Nhật nếu lấy từ design (vd: `Check nhãn 病棟名※`) |
+| E (Preconditions) | **Luôn ghi** ít nhất `Mở MH [tên màn hình JP]`. Nếu TC yêu cầu trạng thái đặc biệt (dropdown mở, có dữ liệu) → ghi rõ. Để trống CHỈ KHI không cần bất kỳ setup nào |
+| F–I (Test Steps) | **Merge 4 cột F:I** trước, rồi ghi numbered list vào ô merged. Luôn bắt đầu: `1. Mở màn hình [Mã module] ([Tên JP])` |
+| J–M (Expected Result) | **Merge 4 cột J:M** trước, rồi ghi giá trị cụ thể (font, size, color, width, height...). KHÔNG ghi "đúng design" |
+| N (Priority) | UI Test Case: mặc định `H`. Layout/Spacing: `M`. Typography tổng hợp: `L` |
 | O (Creator) | Luôn ghi: `AI` |
 
 ### Cột P trở đi — AI KHÔNG điền
@@ -170,6 +170,27 @@ Sử dụng `mcp__google-sheets__batch_update_cells` để ghi:
 - Row 9: Column headers
 
 Sau đó merge cells cho row 9: F9:I9 (Test Steps header) và J9:M9 (Expected Result header).
+
+### Bước 1.5: Tính phạm vi row chính xác
+
+**BẮT BUỘC** tính trước khi thực hiện bất kỳ thao tác merge/border/resize nào:
+
+```
+FIRST_DATA_ROW = 10                          (cố định — header chiếm Row 1–9)
+LAST_DATA_ROW  = FIRST_DATA_ROW + TC_COUNT - 1   (vd: 20 TC → row 29)
+LAST_ROW_INDEX = LAST_DATA_ROW - 1               (0-based, vd: row 29 → index 28)
+END_ROW_INDEX  = LAST_ROW_INDEX + 1               (exclusive, vd: 29)
+```
+
+**Ví dụ:** 20 TC → data từ Row 10 đến Row 29 → `startRowIndex: 9`, `endRowIndex: 29`
+**Ví dụ:** 23 TC → data từ Row 10 đến Row 32 → `startRowIndex: 9`, `endRowIndex: 32`
+
+**KHÔNG ĐƯỢC:**
+- Dùng giá trị cố định lớn (vd: endRowIndex = 120, 200, 321)
+- Tạo merge/border/resize cho row không có data
+- Áp dụng format vượt quá `LAST_DATA_ROW`
+
+Mọi thao tác merge, border, resize ở các bước sau đều phải dùng `END_ROW_INDEX` đã tính ở đây.
 
 ### Bước 2: Merge cells cho data rows
 
@@ -207,6 +228,7 @@ Với mỗi dòng test case (row N), dùng `mcp__google-sheets__batch_update` đ
 
 > **Lưu ý:** `startRowIndex` dùng 0-based (Row 10 trong Sheet = index 9).
 > Cột F=5, I=8 → endColumnIndex=9. Cột J=9, M=12 → endColumnIndex=13.
+> **Chỉ tạo merge cho row có data:** vòng lặp từ `FIRST_DATA_ROW - 1` (= 9) đến `LAST_ROW_INDEX` (= 8 + TC_COUNT). KHÔNG merge row trống.
 
 ### Bước 3: Ghi nội dung test cases
 
@@ -218,69 +240,29 @@ Sử dụng `mcp__google-sheets__batch_update_cells` hoặc `mcp__google-sheets_
 
 ### Bước 3.5: Format rows sau khi ghi
 
-Sau khi ghi data xong, dùng `mcp__google-sheets__batch_update` để format:
+Gọi `mcp__google-sheets__batch_update` **1 lần duy nhất** với tất cả requests gộp chung.
 
-**A. Border cho tất cả data rows:**
-
-Áp dụng border cho toàn bộ vùng data (từ Row 10 đến row cuối cùng có data, cột A-AA):
+Thay `<SHEET_ID>` và `<END>` (= `END_ROW_INDEX` tính ở Bước 1.5) rồi gửi:
 
 ```json
-{
-  "updateBorders": {
-    "range": {
-      "sheetId": "<SHEET_ID>",
-      "startRowIndex": 9,
-      "endRowIndex": "<LAST_ROW_INDEX_0_BASED + 1>",
-      "startColumnIndex": 0,
-      "endColumnIndex": 27
-    },
-    "top": { "style": "SOLID", "width": 1, "color": {"red": 0.8, "green": 0.8, "blue": 0.8} },
-    "bottom": { "style": "SOLID", "width": 1, "color": {"red": 0.8, "green": 0.8, "blue": 0.8} },
-    "left": { "style": "SOLID", "width": 1, "color": {"red": 0.8, "green": 0.8, "blue": 0.8} },
-    "right": { "style": "SOLID", "width": 1, "color": {"red": 0.8, "green": 0.8, "blue": 0.8} },
-    "innerHorizontal": { "style": "SOLID", "width": 1, "color": {"red": 0.8, "green": 0.8, "blue": 0.8} },
-    "innerVertical": { "style": "SOLID", "width": 1, "color": {"red": 0.8, "green": 0.8, "blue": 0.8} }
-  }
-}
+[
+  // --- MERGE (cho mỗi row i từ 9 đến END-1) ---
+  {"mergeCells":{"range":{"sheetId":"<SHEET_ID>","startRowIndex":i,"endRowIndex":i+1,"startColumnIndex":5,"endColumnIndex":9},"mergeType":"MERGE_ALL"}},
+  {"mergeCells":{"range":{"sheetId":"<SHEET_ID>","startRowIndex":i,"endRowIndex":i+1,"startColumnIndex":9,"endColumnIndex":13},"mergeType":"MERGE_ALL"}},
+  // --- BORDER (4 requests, sau tất cả merge) ---
+  {"updateBorders":{"range":{"sheetId":"<SHEET_ID>","startRowIndex":9,"endRowIndex":"<END>","startColumnIndex":0,"endColumnIndex":5},"top":{"style":"DOTTED","width":1,"color":{}},"bottom":{"style":"DOTTED","width":1,"color":{}},"left":{"style":"DOTTED","width":1,"color":{}},"right":{"style":"DOTTED","width":1,"color":{}},"innerHorizontal":{"style":"DOTTED","width":1,"color":{}},"innerVertical":{"style":"DOTTED","width":1,"color":{}}}},
+  {"updateBorders":{"range":{"sheetId":"<SHEET_ID>","startRowIndex":9,"endRowIndex":"<END>","startColumnIndex":5,"endColumnIndex":9},"top":{"style":"DOTTED","width":1,"color":{}},"bottom":{"style":"DOTTED","width":1,"color":{}},"left":{"style":"DOTTED","width":1,"color":{}},"right":{"style":"DOTTED","width":1,"color":{}},"innerHorizontal":{"style":"DOTTED","width":1,"color":{}}}},
+  {"updateBorders":{"range":{"sheetId":"<SHEET_ID>","startRowIndex":9,"endRowIndex":"<END>","startColumnIndex":9,"endColumnIndex":13},"top":{"style":"DOTTED","width":1,"color":{}},"bottom":{"style":"DOTTED","width":1,"color":{}},"left":{"style":"DOTTED","width":1,"color":{}},"right":{"style":"DOTTED","width":1,"color":{}},"innerHorizontal":{"style":"DOTTED","width":1,"color":{}}}},
+  {"updateBorders":{"range":{"sheetId":"<SHEET_ID>","startRowIndex":9,"endRowIndex":"<END>","startColumnIndex":13,"endColumnIndex":27},"top":{"style":"DOTTED","width":1,"color":{}},"bottom":{"style":"DOTTED","width":1,"color":{}},"left":{"style":"DOTTED","width":1,"color":{}},"right":{"style":"DOTTED","width":1,"color":{}},"innerHorizontal":{"style":"DOTTED","width":1,"color":{}},"innerVertical":{"style":"DOTTED","width":1,"color":{}}}},
+  // --- WRAP + RESIZE (sau border) ---
+  {"repeatCell":{"range":{"sheetId":"<SHEET_ID>","startRowIndex":9,"endRowIndex":"<END>","startColumnIndex":0,"endColumnIndex":27},"cell":{"userEnteredFormat":{"wrapStrategy":"WRAP","verticalAlignment":"TOP"}},"fields":"userEnteredFormat.wrapStrategy,userEnteredFormat.verticalAlignment"}},
+  {"autoResizeDimensions":{"dimensions":{"sheetId":"<SHEET_ID>","dimension":"ROWS","startIndex":9,"endIndex":"<END>"}}}
+]
 ```
 
-**B. Chiều cao row tự động theo nội dung:**
+Thứ tự trong array: merge → border → wrap → resize. Gửi **1 lần gọi `batch_update`**.
 
-Cho mỗi data row, set chiều cao tự động (auto-fit) để nội dung hiển thị đầy đủ không bị che khuất và không thừa khoảng trắng:
-
-```json
-{
-  "updateDimensionProperties": {
-    "range": {
-      "sheetId": "<SHEET_ID>",
-      "dimension": "ROWS",
-      "startIndex": 9,
-      "endIndex": "<LAST_ROW_INDEX_0_BASED + 1>"
-    },
-    "properties": {
-      "pixelSize": 0
-    },
-    "fields": "pixelSize"
-  }
-}
-```
-
-Sau đó gọi `autoResizeDimensions` để tự co giãn theo nội dung:
-
-```json
-{
-  "autoResizeDimensions": {
-    "dimensions": {
-      "sheetId": "<SHEET_ID>",
-      "dimension": "ROWS",
-      "startIndex": 9,
-      "endIndex": "<LAST_ROW_INDEX_0_BASED + 1>"
-    }
-  }
-}
-```
-
-> **Lưu ý:** Gộp tất cả requests (merge + border + resize) vào 1 lần gọi `batch_update` để tối ưu.
+**B2. Auto-resize row height** — đã bao gồm trong template trên (`autoResizeDimensions` là request cuối cùng).
 
 ### Bước 4: Preview và xác nhận
 
@@ -296,24 +278,24 @@ Sau đó gọi `autoResizeDimensions` để tự co giãn theo nội dung:
 ```
 Row 10:
   A: =row()-9          → hiển thị: 1
-  B: AT0022
-  C: -
-  D: Check giao diện
-  E: (trống)
-  F (merged F:I): 1. Open màn hình AT0022\n2. Click A\n3. ....
-  J (merged J:M): Giống với design
-  N: M
+  B: SM000?
+  C: Title row
+  D: Check tiêu đề trang
+  E: Mở MH 病棟編集
+  F (merged F:I): 1. Mở màn hình SM000? (病棟編集)\n2. Xem tiêu đề trang
+  J (merged J:M): Tiêu đề hiển thị 「病棟編集」, cùng hàng với nút BACK (trái) và nút 面会枠の種類 (phải).\nFont Noto Sans JP Regular, font size 28px.
+  N: H
   O: AI
 
 Row 11:
   A: =row()-9          → hiển thị: 2
-  B: AT0022
-  C: Filter
-  D: 所属を選択
-  E: (trống)
-  F (merged F:I): 1. Open AT0022\n2. Dropdown list 所属を選択: filter All\n3. Check kết quả filter
-  J (merged J:M): 3. Kết quả filter: hiển thị toàn bộ record của hệ thống
-  N: M
+  B: SM000?
+  C: Form 病棟
+  D: Check nhãn 病棟名※
+  E: Mở MH 病棟編集
+  F (merged F:I): 1. Mở màn hình SM000? (病棟編集)\n2. Xem form 病棟
+  J (merged J:M): Nhãn 「病棟名※」 hiển thị.\nFont Noto Sans CJK JP Bold, font size 14px.
+  N: H
   O: AI
 ```
 

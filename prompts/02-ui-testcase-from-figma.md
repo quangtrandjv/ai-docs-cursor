@@ -79,7 +79,8 @@ Với mỗi element đáng chú ý, tạo 1 test case theo format.
 
 ```
 Title:     Check giao diện tổng quan
-Steps:     1. Open màn hình [Tên frame]
+Precond:   Mở MH [tên màn hình JP]
+Steps:     1. Mở màn hình [Mã module] ([Tên màn hình JP])
            2. Quan sát toàn bộ giao diện
 Expected:  1. Màn hình hiển thị đúng design
            2. Layout, bố cục các thành phần đúng vị trí
@@ -146,17 +147,19 @@ Expected:  Placeholder text 「[placeholder]」 hiển thị.
 **Dropdown / Select:**
 ```
 Title:     Check dropdown [tên dropdown JP]
-Steps:     1. Open màn hình [Tên frame]
+Steps:     1. Mở màn hình [Mã module] ([Tên màn hình JP])
            2. Click dropdown [tên]
            3. Xem danh sách và độ rộng ô
 Expected:  Độ rộng dropdown: [width]px.
            Hiển thị [N] option:
-           [option1]
+           [option1 — tên chính xác từ design]
            [option2]
            ...
            Font [fontSize]px.
            [Border radius: [radius]px.] (nếu có)
 ```
+
+**Quy tắc Dropdown:** PHẢI liệt kê TẤT CẢ tên option visible trong design (duyệt children TEXT nodes của dropdown panel). KHÔNG ghi chung "theo design" hay "ví dụ 「通常面会」「往診」…". Nếu design hiển thị 6 option → ghi rõ cả 6 tên.
 
 **Checkbox / Radio / Toggle:**
 ```
@@ -251,10 +254,16 @@ Expected:  [Image/Avatar] hiển thị [vị trí].
 ```
 Title:     Check khoảng cách padding/gap
 Steps:     1. Open màn hình [Tên frame]
-           2. Xem khoảng cách giữa [mô tả các vùng chính]
-Expected:  Khoảng cách: [liệt kê padding/gap cụ thể từ Figma].
-           Ví dụ: padding form 16px; gap giữa form và list 16px; gap giữa các block 16px.
+           2. Đo khoảng cách giữa các khối chính
+Expected:  [Liệt kê CỤ THỂ từng giá trị lấy từ Figma auto-layout]:
+           Padding top khối [tên]: [N]px.
+           Padding left/right: [N]px.
+           Gap giữa [khối A] và [khối B]: [N]px.
+           itemSpacing trong [section]: [N]px.
+Priority:  M
 ```
+
+**Quy tắc TC Spacing:** Lấy giá trị từ `paddingTop/Bottom/Left/Right` và `itemSpacing` của các FRAME cha có `layoutMode`. Nếu Figma không có auto-layout data → ghi các giá trị có thể tính từ `absoluteBoundingBox` (khoảng cách y giữa 2 element liền kề). KHÔNG ghi "đối chiếu design" hay "đo trên build".
 
 **TC Typography tổng hợp (luôn là TC cuối cùng):**
 ```
@@ -281,11 +290,32 @@ Priority:  L
 #### 4.4 Quy tắc chung khi sinh TC
 
 **Nội dung:**
-- **Mỗi element đáng chú ý = 1 TC riêng biệt**
-- **List items lặp lại → chỉ 1 TC** cho cả nhóm
-- **Mỗi tooltip = 1 TC riêng** — ghi rõ toàn bộ text tooltip
+- **Mỗi element ĐẠI DIỆN = 1 TC** — không tạo TC cho mỗi instance lặp lại
+- **Khi màn hình có NHIỀU form/section cùng loại** (vd: Form 病棟 và Form 面会枠 cùng có nhãn 「表示名」): tạo TC riêng cho **TỪNG section** (max 1 TC mỗi loại element mỗi section)
+- **Mỗi tooltip = 1 TC riêng** — ghi rõ toàn bộ text tooltip (tooltip có nội dung KHÁC nhau thì mới tạo TC riêng)
 - **Mỗi placeholder = ghi rõ text** — không ghi "placeholder đúng design"
 - **TC Spacing + TC Typography** luôn tạo ở cuối nếu có data
+
+**CRITICAL — Gộp repeating items (PHẢI tuân thủ):**
+
+Đây là nguyên nhân #1 gây ra TC thừa. Khi design có nhiều instance cùng pattern:
+
+| Trường hợp | Cách xử lý | Ví dụ |
+|---|---|---|
+| Nhiều dòng data trong list | **1 TC "Check dòng đại diện"** — ghi "danh sách có N dòng, mỗi dòng gồm..." | 3 dòng ward → 1 TC |
+| Nhiều tầng/ward cùng pattern | **1 TC "Check 1 tầng đại diện (病棟)"** | A棟3階, A棟2階, A棟4階 → 1 TC |
+| Nhiều phòng cùng pattern | **1 TC "Check 1 phòng đại diện (病室)"** | 403号室, 404号室 → 1 TC |
+| Nhiều 面会枠 type cùng pattern | **1 TC "Check 1 hàng 面会枠 đại diện"** | 通常面会, 荷物受け渡し, 退院迎え → 1 TC |
+| Cùng label「表示名」 lặp ≥3 lần trong 1 section | **1 TC** cho cả section | 5 lần「表示名」trong Form 病棟 → 1 TC |
+| Cùng dropdown component lặp | **1 TC "Check dropdown đại diện"** | 10 dropdown cùng 224×29px → 1 TC |
+| Button + label cho cùng element | **1 TC** (gộp button và label vào) | Nút「保存」+ nhãn「保存」→ 1 TC cho nút |
+
+**Mục tiêu số TC:** Một màn hình thông thường nên có **20–35 TC**. Nếu > 40 TC → chắc chắn có pattern lặp chưa được gộp. Rà lại trước khi preview.
+
+**KHÔNG ĐƯỢC tạo TC cho:**
+- Mỗi instance riêng lẻ của cùng 1 pattern (vd: TC riêng cho A棟3階, TC riêng cho A棟2階...)
+- Label + button cùng text (vd: nhãn「保存」+ nút「保存」→ chỉ cần 1 TC cho nút)
+- Text rác/overflow (text lặp > 3 lần cùng cụm)
 
 **Expected Result — KHÔNG ĐƯỢC ghi chung chung:**
 - ❌ "hiển thị đúng design"
@@ -323,13 +353,38 @@ Priority:  L
 
 **Nếu Figma không cung cấp giá trị** cho 1 thuộc tính (vd: không có fills, không có cornerRadius) → bỏ qua thuộc tính đó, KHÔNG đoán giá trị.
 
+**Expected Result — CHỈ ghi `thuộc tính: giá trị`, KHÔNG thêm nhận xét:**
+- Mục đích TC là so sánh build với design Figma → chỉ cần cặp thuộc tính + giá trị chính xác
+- ❌ `Text color: #000000 (verify độ tương phản trên nền xanh khi build).`
+- ❌ `Background: #004580 (cần confirm với designer).`
+- ❌ `Đối chiếu padding/gap với design (đo trên build nếu cần).`
+- ✅ `Text color: #ffffff.`
+- ✅ `Background: #004580.`
+- ✅ `Padding top: 16px. Gap: 8px.`
+- KHÔNG dùng từ: "verify", "confirm", "đối chiếu", "theo design", "khi build", "nếu cần"
+
+**CRITICAL — Xử lý Background và Text color:**
+
+1. **Background `#000000` thường là SAI.** Khi Figma trả về `fills[0].color = {}` → đó KHÔNG phải #000000. Quy tắc:
+   - Input field, text field → background thường là `#ffffff`
+   - Button chính → background theo brand color (vd: `#004580`, `#7cbd45`), KHÔNG PHẢI `#000000`
+   - Nếu không xác định được background → **BỎ QUA thuộc tính Background**, ghi `notes: cần verify`
+   - **KHÔNG BAO GIỜ** ghi `Background: #000000` cho input/button trừ khi chắc chắn từ Figma data
+
+2. **Text color trên background đậm:**
+   - Khi element có background đậm → text color thường là `#ffffff`
+   - **PHẢI lấy `fills[0].color` thực tế** của TEXT node bên trong
+   - Nếu Figma trả `color = {}` cho text trên nền đậm → ghi `Text color: #ffffff`
+   - KHÔNG ghi `#000000` rồi thêm "(verify)" — phải xác định giá trị chính xác ngay
+
 **Format:**
-- **Priority mặc định:** `M` (TC Typography = `L`)
+- **Priority mặc định:** `H` (TC Layout/Spacing = `M`, TC Typography = `L`)
 - **Creator:** `AI`
-- **Sub Features (cột C):** Phân nhóm theo vùng UI: `Title row`, `List header`, `List row`, `Form [tên form]`, `Dropdown`, `Bottom`, `Tooltip`, `Layout`, `Typography`. Nếu không xác định được → `-`
+- **Sub Features (cột C):** Phân nhóm theo vùng UI, **PHẢI dùng tên tiếng Nhật** của section/form để phân biệt. Ví dụ: `Title row`, `List header`, `List row`, `Form 病棟`, `Form 面会枠`, `Dropdown`, `Bottom`, `Tooltip`, `Layout`, `Typography`. **KHÔNG dùng** tên generic tiếng Anh như `Form ward`, `Form meeting type`. Nếu không xác định được → `-`
 - **Features (cột B):** Lấy nguyên tên frame từ Figma
+- **Preconditions (cột E):** **Luôn ghi** ít nhất `Mở MH [tên màn hình tiếng Nhật]`. Nếu TC yêu cầu data hoặc trạng thái đặc biệt (dropdown đang mở, có dữ liệu list, tooltip đang hiển thị) → ghi rõ điều kiện đó. Để trống CHỈ KHI không cần bất kỳ setup nào
 - **Ngôn ngữ:** Steps/Expected bằng tiếng Việt, giữ nguyên tên tiếng Nhật từ design
-- **Test Steps:** Luôn bắt đầu bằng `1. Open màn hình [Tên frame]`
+- **Test Steps:** Luôn bắt đầu bằng `1. Mở màn hình [Mã module] ([Tên màn hình tiếng Nhật])`
 - **Expected Result:** Mỗi thuộc tính xuống dòng riêng, dễ đọc
 
 ### Bước 5 — Preview và xác nhận
@@ -365,10 +420,12 @@ Priority:  L
 
 Thực hiện đúng theo quy trình trong `prompts/03-tc-scenario-sheet-template.md`:
 
-1. **Tạo header** (nếu sheet mới hoặc chưa có header)
-2. **Merge cells** F:I và J:M cho mỗi dòng TC
-3. **Ghi data** cột A-O
-4. **Báo cáo kết quả:** Tổng TC đã ghi, range dữ liệu
+1. **Tính phạm vi row** — `LAST_DATA_ROW = 9 + TC_COUNT`. Chỉ tạo merge/border/resize cho đúng số row cần thiết, KHÔNG tạo row thừa
+2. **Tạo header** (nếu sheet mới hoặc chưa có header)
+3. **Merge cells** F:I và J:M cho mỗi dòng TC (chỉ từ Row 10 đến `LAST_DATA_ROW`)
+4. **Ghi data** cột A-O (chỉ từ Row 10 đến `LAST_DATA_ROW`)
+5. **Border + resize** chỉ cho vùng data thực tế (KHÔNG vượt quá `LAST_DATA_ROW`)
+6. **Báo cáo kết quả:** Tổng TC đã ghi, range dữ liệu (vd: A10:O29)
 
 ---
 

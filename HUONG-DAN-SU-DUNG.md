@@ -12,7 +12,7 @@
 4. [Cài đặt dự án](#4-cài-đặt-dự-án)
 5. [Cấu hình MCP trong Cursor](#5-cấu-hình-mcp-trong-cursor)
 6. [Cài đặt Figma Plugin](#6-cài-đặt-figma-plugin)
-7. [Cách sử dụng](#7-cách-sử-dụng)
+7. [Cách sử dụng](#7-cách-sử-dụng) (gồm [đẩy chunk bằng script API](#đẩy-nhiều-chunk-tc-bằng-script-google-sheets-api-một-lần))
 8. [Xử lý lỗi thường gặp](#8-xử-lý-lỗi-thường-gặp)
 
 ---
@@ -317,6 +317,40 @@ AI sẽ:
 2. AI hỏi: **"Xác nhận ghi N test cases chưa?"**
 3. Trả lời **"OK"** hoặc **"Xác nhận"** → AI ghi vào Google Sheet
 4. Sau khi ghi xong, AI thông báo hoàn tất
+
+---
+
+### Đẩy nhiều chunk TC bằng script (Google Sheets API một lần)
+
+Khi đã có các file `mcp-arg-chunk-NN.json` (payload chuẩn cho MCP) và muốn **ghi toàn bộ lên Sheet một lần** mà không gọi MCP từng chunk trong chat:
+
+1. **Xác thực** (chọn một):
+   - **Service Account:** JSON như [mục 3](#3-thiết-lập-google-sheets-api), [share Sheet với email SA](#bước-5-chia-sẻ-google-sheet-với-service-account). Đặt `GOOGLE_APPLICATION_CREDENTIALS` hoặc `CREDENTIALS_PATH` trỏ tới file đó.
+   - **OAuth (giống MCP Google Sheets):** file `credentials.json` (client *installed*) + `token.json` đã đăng nhập. Đặt `CREDENTIALS_PATH` và `TOKEN_PATH` (nếu không đặt `TOKEN_PATH`, script dùng `token.json` cùng thư mục với credentials).
+
+2. Trong PowerShell:
+
+   ```powershell
+   # Service Account
+   $env:GOOGLE_APPLICATION_CREDENTIALS = "C:\Users\<TenBan>\.google\sa-key.json"
+   # hoặc OAuth (MCP)
+   $env:CREDENTIALS_PATH = "C:\Users\<TenBan>\.google\credentials.json"
+   $env:TOKEN_PATH = "C:\Users\<TenBan>\.google\token.json"
+   cd "D:\đường\dẫn\ai-docs-cursor"
+   npm run push-chunks
+   ```
+
+3. Script đọc mọi `mcp-arg-chunk-*.json` trong thư mục gốc dự án, gọi `batchUpdate` với `USER_ENTERED` để công thức (ví dụ `=row()-9`) được tính đúng.
+
+Tùy chọn:
+
+- `node scripts/push-chunks-sheets-api.js --dry-run` — chỉ in tổng số range, không ghi.
+- `node scripts/push-chunks-sheets-api.js --from 4 --to 14` — chỉ các chunk số trong khoảng.
+- `node scripts/push-chunks-sheets-api.js --dir "D:\path"` — thư mục chứa file chunk (mặc định: thư mục gốc repo).
+
+**Lưu ý:** Không commit file JSON key lên Git.
+
+Nếu thiếu `mcp-arg-chunk-01.json` / `02.json` (vùng A10:O29) nhưng đã có `cells-p1-only.json` (dữ liệu gốc A10:O79), chạy `npm run split-p1-chunks` để tạo lại hai file đó trước khi `npm run push-chunks`.
 
 ---
 

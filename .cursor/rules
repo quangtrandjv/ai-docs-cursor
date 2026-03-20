@@ -33,6 +33,13 @@ Config: `mcp-config/mcp.json.example` → copy to `.cursor/mcp.json`, điền AP
 - **Google Sheets:** `GOOGLE_PROJECT_ID`, `GOOGLE_APPLICATION_CREDENTIALS` (đường dẫn file JSON key)
 - **Figma:** Không cần API key — dùng WebSocket + Desktop plugin
 
+## Google Sheet testcase (mặc định)
+
+- Link: [Test case spreadsheet](https://docs.google.com/spreadsheets/d/19uzpDY4hvBdwTwA334hqqBIh34GgIHgDpNSKDZVAPd8/edit?gid=804643631#gid=804643631)
+- Spreadsheet ID: `19uzpDY4hvBdwTwA334hqqBIh34GgIHgDpNSKDZVAPd8`
+- Tab đang mở (gid): `804643631` — các tab khác trong cùng file có gid khác; khi ghi TC hỏi user tên tab nếu không rõ.
+- Sheet output: tự tạo từ template TC_Scenario khi chạy `/start`.
+
 ## Figma Plugin
 
 Source: `figma-plugin/`. Install: Figma Desktop → Plugins → Development → Import plugin from manifest → `figma-plugin/manifest.json`.
@@ -58,12 +65,15 @@ Thực hiện theo `prompts/01-parse-figma-frame-data.md`:
 
 ### Bước 3 — Sinh UI Test Case
 Thực hiện theo `prompts/02-ui-testcase-from-figma.md`:
-- 1 TC tổng quan + 1 TC riêng cho mỗi element + 1 TC riêng cho mỗi tooltip
+- 1 TC tổng quan + 1 TC ĐẠI DIỆN cho mỗi loại element + 1 TC riêng cho mỗi tooltip (nội dung khác nhau)
 - TC Spacing (padding/gap) + TC Typography tổng hợp ở cuối
-- List items lặp → chỉ 1 TC
+- **Repeating items → chỉ 1 TC đại diện** (nhiều tầng/phòng/面会枠 type cùng pattern = 1 TC). Mục tiêu: 20-35 TC/màn hình
+- Background `#000000` từ Figma thường là SAI — bỏ qua hoặc verify từ parent node
 - Expected Result: LUÔN ghi giá trị cụ thể (font, size, color, width, radius, padding) từ Figma scan. KHÔNG ghi "đúng design"
 - Sub Features: phân nhóm theo vùng UI (Title row, Form xxx, Tooltip, Layout...)
-- Priority: M, Creator: AI, Features: tên frame từ Figma
+- Priority: H (Layout/Spacing = M, Typography = L), Creator: AI, Features: tên frame từ Figma
+- Sub Features: dùng tên tiếng Nhật (Form 病棟, Form 面会枠...), KHÔNG dùng tiếng Anh generic
+- Preconditions: luôn ghi ít nhất `Mở MH [tên JP]`
 
 ### Bước 4 — Preview và xác nhận
 - LUÔN hiển thị tóm tắt scan + preview bảng TC trên chat
@@ -77,8 +87,17 @@ Thực hiện theo `prompts/03-tc-scenario-sheet-template.md`:
 - Ghi data cột A-O
 - Báo cáo kết quả
 
+## Quy tắc format trả lời
+
+- Mỗi bước PHẢI bắt đầu bằng `## Bước N — Tên bước`
+- Mỗi bước PHẢI kết thúc bằng block kết quả dạng bảng `| Thông tin | Giá trị |` — theo đúng template trong `start.md`
+- KHÔNG diễn giải dài dòng — chỉ hiển thị đúng template output đã quy định
+- KHÔNG thêm giải thích, lưu ý, hay ghi chú ngoài template trừ khi có lỗi
+- Khi hỏi user → dùng đúng câu hỏi trong template, KHÔNG diễn giải lại
+- Preview TC ở Bước 5 PHẢI dùng markdown table với cột: #, Sub Features, Test Case Title, Pri, Expected (tóm tắt)
+
 ## Quy tắc tổng quát
 - Không tự chạy quá 1 bước nếu chưa được yêu cầu
-- Mỗi bước xong phải tóm tắt kết quả và hỏi bước tiếp
+- Mỗi bước xong phải hiển thị kết quả theo format và hỏi bước tiếp
 - Khi không chắc → hỏi, không tự đoán
 - Khi user yêu cầu chỉnh sửa → thực hiện ngay, không hỏi lại

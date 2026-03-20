@@ -8,10 +8,13 @@
   },
   "scripts": {
     "postinstall": "echo 'Copy mcp-config/mcp.json.example to .cursor/mcp.json and fill your API keys. See README.md'",
-    "figma-socket": "node scripts/figma-ws-server.js"
+    "figma-socket": "node scripts/figma-ws-server.js",
+    "push-chunks": "node scripts/push-chunks-sheets-api.js",
+    "split-p1-chunks": "node scripts/split-cells-p1-to-chunks.js"
   },
   "dependencies": {
     "cursor-talk-to-figma-mcp": "latest",
+    "googleapis": "^140.0.1",
     "mcp-gsheets": "latest"
   },
   "overrides": {
